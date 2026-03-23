@@ -3,6 +3,10 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
 export default function AdminDashboard() {
+  const [loggedIn, setLoggedIn] = useState(false)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
   const [tables, setTables] = useState<any[]>([])
   const [reservations, setReservations] = useState<any[]>([])
   const [tableNumber, setTableNumber] = useState('')
@@ -12,16 +16,37 @@ export default function AdminDashboard() {
   const [lastUpdated, setLastUpdated] = useState<string>('')
 
   useEffect(() => {
+    const auth = sessionStorage.getItem('admin_auth')
+    if (auth === 'true') setLoggedIn(true)
+  }, [])
+
+  useEffect(() => {
+    if (!loggedIn) return
     fetchTables()
     fetchReservations()
-
     const interval = setInterval(() => {
       fetchReservations()
       fetchTables()
     }, 5000)
-
     return () => clearInterval(interval)
-  }, [])
+  }, [loggedIn])
+
+  function handleLogin() {
+    if (username === 'aksharbrahm' && password === 'das369') {
+      sessionStorage.setItem('admin_auth', 'true')
+      setLoggedIn(true)
+      setLoginError('')
+    } else {
+      setLoginError('Wrong username or password.')
+    }
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem('admin_auth')
+    setLoggedIn(false)
+    setUsername('')
+    setPassword('')
+  }
 
   async function fetchTables() {
     const { data } = await supabase
@@ -90,15 +115,143 @@ export default function AdminDashboard() {
     fetchReservations()
   }
 
+  // Login Page
+  if (!loggedIn) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        backgroundColor: '#0f0f0f',
+        fontFamily: 'sans-serif',
+        color: '#fff'
+      }}>
+        <div style={{
+          backgroundColor: '#1a1a1a',
+          border: '1px solid #333',
+          borderRadius: '16px',
+          padding: '40px',
+          width: '100%',
+          maxWidth: '400px'
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🍽️</div>
+            <h1 style={{ fontSize: '1.5rem', marginBottom: '4px' }}>Admin Login</h1>
+            <p style={{ color: '#aaa', fontSize: '0.85rem' }}>Enter your credentials to continue</p>
+          </div>
+
+          {loginError && (
+            <div style={{
+              backgroundColor: '#450a0a',
+              border: '1px solid #ef4444',
+              color: '#ef4444',
+              padding: '10px 16px',
+              borderRadius: '8px',
+              marginBottom: '16px',
+              fontSize: '0.85rem',
+              textAlign: 'center'
+            }}>
+              {loginError}
+            </div>
+          )}
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ fontSize: '0.85rem', color: '#aaa', display: 'block', marginBottom: '6px' }}>
+              Username
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleLogin()}
+              placeholder="Enter username"
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: '1px solid #333',
+                backgroundColor: '#0f0f0f',
+                color: '#fff',
+                fontSize: '0.95rem',
+                boxSizing: 'border-box',
+                outline: 'none'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ fontSize: '0.85rem', color: '#aaa', display: 'block', marginBottom: '6px' }}>
+              Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleLogin()}
+              placeholder="Enter password"
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: '1px solid #333',
+                backgroundColor: '#0f0f0f',
+                color: '#fff',
+                fontSize: '0.95rem',
+                boxSizing: 'border-box',
+                outline: 'none'
+              }}
+            />
+          </div>
+
+          <button
+            onClick={handleLogin}
+            style={{
+              width: '100%',
+              padding: '12px',
+              backgroundColor: '#fff',
+              color: '#000',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '1rem',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            Login
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Admin Dashboard
   return (
     <div style={{ fontFamily: 'sans-serif', padding: '24px', backgroundColor: '#0f0f0f', minHeight: '100vh', color: '#fff' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
         <h1 style={{ fontSize: '1.8rem' }}>🍽️ Admin Dashboard</h1>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ color: '#4ade80', fontSize: '0.75rem' }}>● Auto refreshing every 5s</div>
-          <div style={{ color: '#666', fontSize: '0.75rem' }}>Last updated: {lastUpdated}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ color: '#4ade80', fontSize: '0.75rem' }}>● Auto refreshing every 5s</div>
+            <div style={{ color: '#666', fontSize: '0.75rem' }}>Last updated: {lastUpdated}</div>
+          </div>
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: '#1a1a1a',
+              color: '#ef4444',
+              border: '1px solid #ef4444',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '0.85rem'
+            }}
+          >
+            Logout
+          </button>
         </div>
       </div>
       <p style={{ color: '#aaa', marginBottom: '32px' }}>Manage your restaurant tables and reservations</p>
