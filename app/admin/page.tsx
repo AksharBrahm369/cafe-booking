@@ -14,10 +14,16 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [lastUpdated, setLastUpdated] = useState<string>('')
+  const [restaurantName, setRestaurantName] = useState('')
+  const [daysLeft, setDaysLeft] = useState('')
 
   useEffect(() => {
     const auth = sessionStorage.getItem('admin_auth')
-    if (auth === 'true') setLoggedIn(true)
+    if (auth === 'true') {
+      setLoggedIn(true)
+      setRestaurantName(sessionStorage.getItem('restaurant_name') || '')
+      setDaysLeft(sessionStorage.getItem('days_left') || '')
+    }
   }, [])
 
   useEffect(() => {
@@ -45,12 +51,13 @@ export default function AdminDashboard() {
     }
 
     if (!data.is_active) {
-      setLoginError('Your subscription has expired. Please contact the developer to renew.')
+      setLoginError('Your subscription has been revoked. Please contact the developer.')
       return
     }
 
-    const daysLeft = Math.ceil((new Date(data.expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-    if (daysLeft <= 0) {
+    const days = Math.ceil((new Date(data.expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+
+    if (days <= 0) {
       setLoginError('Your subscription has expired. Please contact the developer to renew.')
       return
     }
@@ -58,13 +65,18 @@ export default function AdminDashboard() {
     sessionStorage.setItem('admin_auth', 'true')
     sessionStorage.setItem('restaurant_id', data.id.toString())
     sessionStorage.setItem('restaurant_name', data.name)
-    sessionStorage.setItem('days_left', daysLeft.toString())
+    sessionStorage.setItem('days_left', days.toString())
+    setRestaurantName(data.name)
+    setDaysLeft(days.toString())
     setLoggedIn(true)
     setLoginError('')
   }
 
   function handleLogout() {
     sessionStorage.removeItem('admin_auth')
+    sessionStorage.removeItem('restaurant_id')
+    sessionStorage.removeItem('restaurant_name')
+    sessionStorage.removeItem('days_left')
     setLoggedIn(false)
     setUsername('')
     setPassword('')
@@ -141,22 +153,13 @@ export default function AdminDashboard() {
   if (!loggedIn) {
     return (
       <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        backgroundColor: '#0f0f0f',
-        fontFamily: 'sans-serif',
-        color: '#fff'
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', height: '100vh', backgroundColor: '#0f0f0f',
+        fontFamily: 'sans-serif', color: '#fff'
       }}>
         <div style={{
-          backgroundColor: '#1a1a1a',
-          border: '1px solid #333',
-          borderRadius: '16px',
-          padding: '40px',
-          width: '100%',
-          maxWidth: '400px'
+          backgroundColor: '#1a1a1a', border: '1px solid #333',
+          borderRadius: '16px', padding: '40px', width: '100%', maxWidth: '400px'
         }}>
           <div style={{ textAlign: 'center', marginBottom: '32px' }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>🍽️</div>
@@ -166,80 +169,39 @@ export default function AdminDashboard() {
 
           {loginError && (
             <div style={{
-              backgroundColor: '#450a0a',
-              border: '1px solid #ef4444',
-              color: '#ef4444',
-              padding: '10px 16px',
-              borderRadius: '8px',
-              marginBottom: '16px',
-              fontSize: '0.85rem',
-              textAlign: 'center'
+              backgroundColor: '#450a0a', border: '1px solid #ef4444',
+              color: '#ef4444', padding: '10px 16px', borderRadius: '8px',
+              marginBottom: '16px', fontSize: '0.85rem', textAlign: 'center'
             }}>
               {loginError}
             </div>
           )}
 
           <div style={{ marginBottom: '16px' }}>
-            <label style={{ fontSize: '0.85rem', color: '#aaa', display: 'block', marginBottom: '6px' }}>
-              Username
-            </label>
+            <label style={{ fontSize: '0.85rem', color: '#aaa', display: 'block', marginBottom: '6px' }}>Username</label>
             <input
-              type="text"
-              value={username}
+              type="text" value={username}
               onChange={e => setUsername(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleLogin()}
               placeholder="Enter username"
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                borderRadius: '8px',
-                border: '1px solid #333',
-                backgroundColor: '#0f0f0f',
-                color: '#fff',
-                fontSize: '0.95rem',
-                boxSizing: 'border-box',
-                outline: 'none'
-              }}
+              style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0f0f0f', color: '#fff', fontSize: '0.95rem', boxSizing: 'border-box', outline: 'none' }}
             />
           </div>
 
           <div style={{ marginBottom: '24px' }}>
-            <label style={{ fontSize: '0.85rem', color: '#aaa', display: 'block', marginBottom: '6px' }}>
-              Password
-            </label>
+            <label style={{ fontSize: '0.85rem', color: '#aaa', display: 'block', marginBottom: '6px' }}>Password</label>
             <input
-              type="password"
-              value={password}
+              type="password" value={password}
               onChange={e => setPassword(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleLogin()}
               placeholder="Enter password"
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                borderRadius: '8px',
-                border: '1px solid #333',
-                backgroundColor: '#0f0f0f',
-                color: '#fff',
-                fontSize: '0.95rem',
-                boxSizing: 'border-box',
-                outline: 'none'
-              }}
+              style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0f0f0f', color: '#fff', fontSize: '0.95rem', boxSizing: 'border-box', outline: 'none' }}
             />
           </div>
 
           <button
             onClick={handleLogin}
-            style={{
-              width: '100%',
-              padding: '12px',
-              backgroundColor: '#fff',
-              color: '#000',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              fontWeight: 'bold',
-              cursor: 'pointer'
-            }}
+            style={{ width: '100%', padding: '12px', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer' }}
           >
             Login
           </button>
@@ -255,12 +217,12 @@ export default function AdminDashboard() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
         <div>
-  <h1 style={{ fontSize: '1.8rem' }}>🍽️ Admin Dashboard</h1>
-  <p style={{ color: '#aaa', fontSize: '0.85rem' }}>
-    {typeof window !== 'undefined' && sessionStorage.getItem('restaurant_name')} — 
-    <span style={{ color: '#facc15' }}> {typeof window !== 'undefined' && sessionStorage.getItem('days_left')} days left</span>
-  </p>
-</div>
+          <h1 style={{ fontSize: '1.8rem' }}>🍽️ Admin Dashboard</h1>
+          <p style={{ color: '#aaa', fontSize: '0.85rem' }}>
+            {restaurantName} —
+            <span style={{ color: parseInt(daysLeft) <= 7 ? '#ef4444' : '#facc15' }}> {daysLeft} days left</span>
+          </p>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ color: '#4ade80', fontSize: '0.75rem' }}>● Auto refreshing every 5s</div>
@@ -268,15 +230,7 @@ export default function AdminDashboard() {
           </div>
           <button
             onClick={handleLogout}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#1a1a1a',
-              color: '#ef4444',
-              border: '1px solid #ef4444',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '0.85rem'
-            }}
+            style={{ padding: '8px 16px', backgroundColor: '#1a1a1a', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem' }}
           >
             Logout
           </button>
@@ -295,22 +249,17 @@ export default function AdminDashboard() {
         <h2 style={{ marginBottom: '16px' }}>Add New Table</h2>
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <input
-            type="number"
-            placeholder="Table Number"
-            value={tableNumber}
+            type="number" placeholder="Table Number" value={tableNumber}
             onChange={e => setTableNumber(e.target.value)}
             style={{ padding: '10px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0f0f0f', color: '#fff', fontSize: '14px' }}
           />
           <input
-            type="number"
-            placeholder="Number of Seats"
-            value={seats}
+            type="number" placeholder="Number of Seats" value={seats}
             onChange={e => setSeats(e.target.value)}
             style={{ padding: '10px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#0f0f0f', color: '#fff', fontSize: '14px' }}
           />
           <button
-            onClick={addTable}
-            disabled={loading}
+            onClick={addTable} disabled={loading}
             style={{ padding: '10px 20px', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
           >
             {loading ? 'Adding...' : 'Add Table'}
@@ -329,10 +278,7 @@ export default function AdminDashboard() {
               <div key={table.id} style={{
                 backgroundColor: '#0f0f0f',
                 border: `1px solid ${table.is_active ? '#4ade80' : '#ef4444'}`,
-                borderRadius: '10px',
-                padding: '16px',
-                minWidth: '140px',
-                textAlign: 'center'
+                borderRadius: '10px', padding: '16px', minWidth: '140px', textAlign: 'center'
               }}>
                 <div style={{ fontSize: '1.4rem' }}>🪑</div>
                 <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>Table {table.table_number}</div>
@@ -342,33 +288,13 @@ export default function AdminDashboard() {
                 </div>
                 <button
                   onClick={() => toggleTable(table.id, table.is_active)}
-                  style={{
-                    marginTop: '8px',
-                    padding: '6px 12px',
-                    backgroundColor: table.is_active ? '#ef4444' : '#4ade80',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '0.75rem',
-                    width: '100%'
-                  }}
+                  style={{ marginTop: '8px', padding: '6px 12px', backgroundColor: table.is_active ? '#ef4444' : '#4ade80', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', width: '100%' }}
                 >
                   {table.is_active ? 'Deactivate' : 'Activate'}
                 </button>
                 <button
                   onClick={() => deleteTable(table.id)}
-                  style={{
-                    marginTop: '6px',
-                    padding: '6px 12px',
-                    backgroundColor: '#1a1a1a',
-                    color: '#ef4444',
-                    border: '1px solid #ef4444',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '0.75rem',
-                    width: '100%'
-                  }}
+                  style={{ marginTop: '6px', padding: '6px 12px', backgroundColor: '#1a1a1a', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', width: '100%' }}
                 >
                   Delete
                 </button>
@@ -417,9 +343,7 @@ export default function AdminDashboard() {
                     <td style={{ padding: '12px' }}>{res.time}</td>
                     <td style={{ padding: '12px' }}>
                       <span style={{
-                        padding: '4px 10px',
-                        borderRadius: '20px',
-                        fontSize: '0.75rem',
+                        padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem',
                         backgroundColor: res.status === 'confirmed' ? '#14532d' : '#450a0a',
                         color: res.status === 'confirmed' ? '#4ade80' : '#ef4444'
                       }}>
