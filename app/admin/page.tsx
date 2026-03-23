@@ -9,10 +9,18 @@ export default function AdminDashboard() {
   const [seats, setSeats] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [lastUpdated, setLastUpdated] = useState<string>('')
 
   useEffect(() => {
     fetchTables()
     fetchReservations()
+
+    const interval = setInterval(() => {
+      fetchReservations()
+      fetchTables()
+    }, 5000)
+
+    return () => clearInterval(interval)
   }, [])
 
   async function fetchTables() {
@@ -28,7 +36,10 @@ export default function AdminDashboard() {
       .from('reservations')
       .select('*, restaurant_tables(table_number)')
       .order('created_at', { ascending: false })
-    if (data) setReservations(data)
+    if (data) {
+      setReservations(data)
+      setLastUpdated(new Date().toLocaleTimeString())
+    }
   }
 
   async function addTable() {
@@ -42,6 +53,7 @@ export default function AdminDashboard() {
       setTableNumber('')
       setSeats('')
       fetchTables()
+      setTimeout(() => setMessage(''), 3000)
     }
     setLoading(false)
   }
@@ -54,6 +66,14 @@ export default function AdminDashboard() {
     fetchTables()
   }
 
+  async function deleteTable(id: number) {
+    await supabase
+      .from('restaurant_tables')
+      .delete()
+      .eq('id', id)
+    fetchTables()
+  }
+
   async function cancelReservation(id: number) {
     await supabase
       .from('reservations')
@@ -62,9 +82,25 @@ export default function AdminDashboard() {
     fetchReservations()
   }
 
+  async function deleteReservation(id: number) {
+    await supabase
+      .from('reservations')
+      .delete()
+      .eq('id', id)
+    fetchReservations()
+  }
+
   return (
     <div style={{ fontFamily: 'sans-serif', padding: '24px', backgroundColor: '#0f0f0f', minHeight: '100vh', color: '#fff' }}>
-      <h1 style={{ fontSize: '1.8rem', marginBottom: '8px' }}>🍽️ Admin Dashboard</h1>
+
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+        <h1 style={{ fontSize: '1.8rem' }}>🍽️ Admin Dashboard</h1>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ color: '#4ade80', fontSize: '0.75rem' }}>● Auto refreshing every 5s</div>
+          <div style={{ color: '#666', fontSize: '0.75rem' }}>Last updated: {lastUpdated}</div>
+        </div>
+      </div>
       <p style={{ color: '#aaa', marginBottom: '32px' }}>Manage your restaurant tables and reservations</p>
 
       {message && (
@@ -133,10 +169,27 @@ export default function AdminDashboard() {
                     border: 'none',
                     borderRadius: '6px',
                     cursor: 'pointer',
-                    fontSize: '0.75rem'
+                    fontSize: '0.75rem',
+                    width: '100%'
                   }}
                 >
                   {table.is_active ? 'Deactivate' : 'Activate'}
+                </button>
+                <button
+                  onClick={() => deleteTable(table.id)}
+                  style={{
+                    marginTop: '6px',
+                    padding: '6px 12px',
+                    backgroundColor: '#1a1a1a',
+                    color: '#ef4444',
+                    border: '1px solid #ef4444',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    width: '100%'
+                  }}
+                >
+                  Delete
                 </button>
               </div>
             ))}
@@ -146,7 +199,15 @@ export default function AdminDashboard() {
 
       {/* Reservations Section */}
       <div style={{ backgroundColor: '#1a1a1a', padding: '24px', borderRadius: '12px', border: '1px solid #333' }}>
-        <h2 style={{ marginBottom: '16px' }}>Reservations ({reservations.length})</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h2>Reservations ({reservations.length})</h2>
+          <button
+            onClick={fetchReservations}
+            style={{ padding: '8px 16px', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold' }}
+          >
+            🔄 Refresh
+          </button>
+        </div>
         {reservations.length === 0 ? (
           <p style={{ color: '#aaa' }}>No reservations yet.</p>
         ) : (
@@ -161,7 +222,7 @@ export default function AdminDashboard() {
                   <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Date</th>
                   <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Time</th>
                   <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Status</th>
-                  <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Action</th>
+                  <th style={{ padding: '12px', textAlign: 'left', color: '#aaa' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -185,14 +246,22 @@ export default function AdminDashboard() {
                       </span>
                     </td>
                     <td style={{ padding: '12px' }}>
-                      {res.status === 'confirmed' && (
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        {res.status === 'confirmed' && (
+                          <button
+                            onClick={() => cancelReservation(res.id)}
+                            style={{ padding: '6px 12px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem' }}
+                          >
+                            Cancel
+                          </button>
+                        )}
                         <button
-                          onClick={() => cancelReservation(res.id)}
-                          style={{ padding: '6px 12px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem' }}
+                          onClick={() => deleteReservation(res.id)}
+                          style={{ padding: '6px 12px', backgroundColor: '#1a1a1a', color: '#ef4444', border: '1px solid #ef4444', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem' }}
                         >
-                          Cancel
+                          Delete
                         </button>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ))}
