@@ -31,14 +31,36 @@ export default function AdminDashboard() {
     return () => clearInterval(interval)
   }, [loggedIn])
 
-  function handleLogin() {
-    if (username === 'aksharbrahm' && password === 'das369') {
-      sessionStorage.setItem('admin_auth', 'true')
-      setLoggedIn(true)
-      setLoginError('')
-    } else {
+  async function handleLogin() {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('*')
+      .eq('owner_username', username)
+      .eq('owner_password', password)
+      .single()
+
+    if (error || !data) {
       setLoginError('Wrong username or password.')
+      return
     }
+
+    if (!data.is_active) {
+      setLoginError('Your subscription has expired. Please contact the developer to renew.')
+      return
+    }
+
+    const daysLeft = Math.ceil((new Date(data.expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    if (daysLeft <= 0) {
+      setLoginError('Your subscription has expired. Please contact the developer to renew.')
+      return
+    }
+
+    sessionStorage.setItem('admin_auth', 'true')
+    sessionStorage.setItem('restaurant_id', data.id.toString())
+    sessionStorage.setItem('restaurant_name', data.name)
+    sessionStorage.setItem('days_left', daysLeft.toString())
+    setLoggedIn(true)
+    setLoginError('')
   }
 
   function handleLogout() {
@@ -232,7 +254,13 @@ export default function AdminDashboard() {
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-        <h1 style={{ fontSize: '1.8rem' }}>🍽️ Admin Dashboard</h1>
+        <div>
+  <h1 style={{ fontSize: '1.8rem' }}>🍽️ Admin Dashboard</h1>
+  <p style={{ color: '#aaa', fontSize: '0.85rem' }}>
+    {typeof window !== 'undefined' && sessionStorage.getItem('restaurant_name')} — 
+    <span style={{ color: '#facc15' }}> {typeof window !== 'undefined' && sessionStorage.getItem('days_left')} days left</span>
+  </p>
+</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ color: '#4ade80', fontSize: '0.75rem' }}>● Auto refreshing every 5s</div>

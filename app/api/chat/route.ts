@@ -8,7 +8,31 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, phone, conversationHistory } = await req.json()
+    const { message, phone, conversationHistory, restaurantId } = await req.json()
+
+    // Check if restaurant is active
+    if (restaurantId) {
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('*')
+        .eq('id', restaurantId)
+        .single()
+
+      if (!restaurant || !restaurant.is_active) {
+        return NextResponse.json({
+          reply: 'Sorry, online booking is currently unavailable. Please contact the restaurant directly.',
+          booked: false
+        })
+      }
+
+      const daysLeft = Math.ceil((new Date(restaurant.expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+      if (daysLeft <= 0) {
+        return NextResponse.json({
+          reply: 'Sorry, online booking is currently unavailable. Please contact the restaurant directly.',
+          booked: false
+        })
+      }
+    }
 
     const { data: tables } = await supabase
       .from('restaurant_tables')
@@ -46,8 +70,6 @@ export async function POST(req: NextRequest) {
     )
 
     const groqData = await groqRes.json()
-    console.log('Groq status:', groqRes.status)
-    console.log('Groq data:', JSON.stringify(groqData, null, 2))
 
     if (!groqRes.ok) {
       return NextResponse.json(
