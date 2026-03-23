@@ -16,6 +16,7 @@ export default function AdminDashboard() {
   const [lastUpdated, setLastUpdated] = useState<string>('')
   const [restaurantName, setRestaurantName] = useState('')
   const [daysLeft, setDaysLeft] = useState('')
+  const [revokeMessage, setRevokeMessage] = useState('')
 
   useEffect(() => {
     const auth = sessionStorage.getItem('admin_auth')
@@ -33,6 +34,7 @@ export default function AdminDashboard() {
     const interval = setInterval(() => {
       fetchReservations()
       fetchTables()
+      checkSubscription()
     }, 5000)
     return () => clearInterval(interval)
   }, [loggedIn])
@@ -80,6 +82,36 @@ export default function AdminDashboard() {
     setLoggedIn(false)
     setUsername('')
     setPassword('')
+    setRevokeMessage('')
+  }
+
+  async function checkSubscription() {
+    const restaurantId = sessionStorage.getItem('restaurant_id')
+    if (!restaurantId) return
+
+    const { data } = await supabase
+      .from('restaurants')
+      .select('*')
+      .eq('id', restaurantId)
+      .single()
+
+    if (!data) return
+
+    if (!data.is_active) {
+      setRevokeMessage('Your subscription has been revoked by the developer. You will be logged out in 5 seconds. Please contact the developer to restore access.')
+      setTimeout(() => {
+        handleLogout()
+      }, 5000)
+      return
+    }
+
+    const days = Math.ceil((new Date(data.expires_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    if (days <= 0) {
+      setRevokeMessage('Your subscription has expired. You will be logged out in 5 seconds. Please contact the developer to renew.')
+      setTimeout(() => {
+        handleLogout()
+      }, 5000)
+    }
   }
 
   async function fetchTables() {
@@ -213,6 +245,30 @@ export default function AdminDashboard() {
   // Admin Dashboard
   return (
     <div style={{ fontFamily: 'sans-serif', padding: '24px', backgroundColor: '#0f0f0f', minHeight: '100vh', color: '#fff' }}>
+
+      {/* Revoke Popup */}
+      {revokeMessage && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.9)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999
+        }}>
+          <div style={{
+            backgroundColor: '#1a1a1a', border: '2px solid #ef4444',
+            borderRadius: '16px', padding: '40px', maxWidth: '480px', textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🚫</div>
+            <h2 style={{ color: '#ef4444', marginBottom: '16px' }}>Access Revoked</h2>
+            <p style={{ color: '#fff', lineHeight: '1.6', marginBottom: '8px' }}>
+              {revokeMessage}
+            </p>
+            <p style={{ color: '#aaa', fontSize: '0.85rem' }}>
+              Logging you out automatically in 5 seconds...
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
