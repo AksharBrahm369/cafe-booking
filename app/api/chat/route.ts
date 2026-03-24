@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       { role: 'user', content: message }
     ]
 
-    const systemPrompt = 'You are a friendly restaurant table booking assistant. Available tables: ' + tablesList + '. Collect from customer: 1. Name 2. Table number 3. Number of guests 4. Date 5. Time. Be conversational and friendly. Once you have ALL details and customer confirms, respond with EXACTLY this on the last line: BOOKING_CONFIRMED:name={name},table={tableNumber},guests={guests},date={date},time={time},phone=' + (phone || 'walk-in')
+    const systemPrompt = 'You are a friendly restaurant table booking assistant. Available tables with their seat capacity: ' + tablesList + '. Rules you must follow: 1. When customer asks for a specific table, check if their guest count fits that table. For example if Table 2 has 6 seats and customer has 4 guests, say something like "Table 2 has 6 seats, which is more than you need for 4 guests. I suggest Table 3 which has exactly 4 seats - would you like that instead?" 2. Never book a table where guests exceed the seat capacity. 3. Always suggest the best fitting table based on guest count. 4. Collect in order: Name, Table number, Number of guests, Date, Time. 5. Be conversational and friendly. 6. Once you have ALL details and customer confirms, respond with EXACTLY this on the last line: BOOKING_CONFIRMED:name={name},table={tableNumber},guests={guests},date={date},time={time},phone=' + (phone || 'walk-in')
 
     const groqRes = await fetch(
       'https://api.groq.com/openai/v1/chat/completions',
